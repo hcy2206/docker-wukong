@@ -2,35 +2,46 @@
 
 ## 环境
 
-- Docker 与 Docker Compose v2。
-- Docker 后端可运行 Linux amd64 容器，并提供 TUN 与 NET_ADMIN。
+- ARM64 Linux 服务器，Docker 与 Docker Compose v2。
+- Docker 可提供 `/dev/net/tun` 和 `NET_ADMIN`；宿主页大小支持 4KB 或 16KB。
 - Bash、curl、openssl，以及 `sha256sum` 或 `shasum`。
+- 构建网络能够访问 Debian 软件源、ARP 官方下载地址和 GitHub Electron Releases。
 
-Linux 可直接使用 Bash；Windows 可在 WSL 中运行脚本并连接 Docker Desktop；macOS 可使用 Bash 和支持 Linux 容器的 Docker 后端。ARM 主机需要后端提供 amd64 转译。这些条件不保证单位准入策略接受当前终端。
+构建和运行都使用 ARM64 工具。AMD64 glibc 只下载、提取，不执行其安装脚本或二进制；QEMU 位于容器内，无需安装宿主机 qemu-user-binfmt。
 
 ## 构建
 
 在仓库根目录执行：
 
-```sh
+~~~sh
+cp .env.example .env
+# 编辑 .env，设置 WUKONG_BIND_IP 为服务器实际地址。
 ./scripts/download-client.sh
+./scripts/download-electron.sh
 ./scripts/setup.sh
-docker compose build
-docker compose up -d
-```
+sudo docker compose build
+sudo docker compose up -d
+~~~
 
-安装包下载至 `packages/`，不纳入版本控制。下载脚本和 Dockerfile 均校验 SHA-256；可自行从同一官方地址下载并放入该目录。
+也可从以下官方地址手动下载到 `packages/`。下载脚本与 Dockerfile 均核验固定 SHA-256，二进制不纳入版本控制。
 
-- 客户端：`Wukong-v2.14.00051.1_ubuntu-kylinos_amd64.deb`
-- 官方下载页：https://newtrust.arp.cn/client/download
-- SHA-256：`15d7cee09556f15090e8502e7db0633ee3accac56d44b447e9ff6bd96df58bed`
+| 文件 | SHA-256 |
+| --- | --- |
+| `Wukong-v2.14.00051.1_ubuntu-kylinos_amd64.deb` | `15d7cee09556f15090e8502e7db0633ee3accac56d44b447e9ff6bd96df58bed` |
+| `electron-v22.3.2-linux-arm64.zip` | `d9436201a8725d717819088df01512dae5b1b7daf7f94b9a9d1a8f27e0d8e830` |
 
-该校验值来自实际下载的官方文件，不是厂商另行发布的签名。
+来源：[ARP 安装包](https://portal.arp.cn/software/Wukong-v2.14.00051.1_ubuntu-kylinos_amd64.deb)、[Electron 22.3.2 ARM64](https://github.com/electron/electron/releases/download/v22.3.2/electron-v22.3.2-linux-arm64.zip)、[Electron 官方校验表](https://github.com/electron/electron/releases/download/v22.3.2/SHASUMS256.txt)。客户端校验值来自实际下载文件；Electron 校验值来自官方校验表。
 
 ## 实现
 
-镜像基于 Debian，安装 Chromium、TigerVNC、Openbox 和代理服务。提取厂商安装包并初始化路径，通过 supervisord 启动 `tsinvc-linux run <config>`、GUI 和各服务。
+Dockerfile 包含三个阶段：
 
-桌面使用容器 root，Chromium/Electron 以 `--no-sandbox` 运行，仅用于受信任的单位门户。Docker 网络使用 bridge，容器增加 NET_ADMIN 和 TUN。
+1. **vendor**：原生工具提取悟空安装包和 Debian Bookworm 的 AMD64 glibc，不运行厂商安装脚本。
+2. **compat**：Debian Trixie 提供 ARM64 静态 QEMU，并用交叉编译器构建 AMD64 页大小兼容库。
+3. **运行镜像**：Debian Bookworm ARM64，安装原生桌面和代理，使用 Electron ARM64 加载原始厂商 GUI JavaScript，显式启动 QEMU 后台。
 
-升级版本需同步修改安装包名、下载地址、校验值、镜像标签及持久化卷迁移方式。基础验证见 [CONTRIBUTING.md](../CONTRIBUTING.md)。
+运行镜像不包含交叉编译器。16KB 页大小修复原理与验证记录见 [ARM64 适配过程](arm64.md)。
+
+桌面以容器 root 运行，Chromium/Electron 使用 `--no-sandbox`。网络使用 Docker bridge，授予容器 `NET_ADMIN` 和 TUN；局域网代理不带认证，仅向可信网络开放。
+
+升级客户端需同步安装包名、校验值、Electron 版本、镜像标签和卷迁移方式，并重新核对后台依赖及 GUI 原生模块。基础检查见 [CONTRIBUTING.md](../CONTRIBUTING.md)。

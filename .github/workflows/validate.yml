@@ -18,6 +18,8 @@ jobs:
           for script in scripts/*.sh; do bash -n "$script"; done
           sh -n scripts/wukong-browser
           shellcheck scripts/*.sh scripts/wukong-browser
+      - name: Check compatibility library syntax
+        run: gcc -fsyntax-only -Wall -Wextra scripts/auxv-pagesize.c
       - name: Validate Compose configuration
         run: |
           ./scripts/setup.sh
@@ -34,7 +36,12 @@ jobs:
           assert checksum in downloader, 'Installer SHA-256 values differ'
           name = re.search(r'ARG CLIENT_DEB=(.*)', dockerfile).group(1)
           assert name in downloader, 'Installer filenames differ'
+          electron_downloader = Path('scripts/download-electron.sh').read_text()
+          electron_checksum = re.search(r"echo '([0-9a-f]{64})  /tmp/electron-arm64.zip'", dockerfile).group(1)
+          assert electron_checksum in electron_downloader, 'Electron SHA-256 values differ'
+          assert 'electron-v22.3.2-linux-arm64.zip' in electron_downloader
+          assert 'platform: linux/arm64' in Path('compose.yaml').read_text()
           tracked = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
-          forbidden = [f for f in tracked if f.startswith(('.secrets/', 'inspection/', 'dist/')) or f.endswith(('.deb', '.part', '.log', '.DS_Store'))]
+          forbidden = [f for f in tracked if f.startswith(('.secrets/', 'inspection/', 'dist/')) or f.endswith(('.deb', '.zip', '.so', '.db', '.part', '.log', '.DS_Store'))]
           assert not forbidden, f'Local artifacts tracked: {forbidden}'
           PY

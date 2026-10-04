@@ -2,8 +2,8 @@ name: docker-wukong
 services:
   wukong:
     build: .
-    image: wukong:2.14.00051.1
-    platform: linux/amd64
+    image: wukong:2.14.00051.1-arm64
+    platform: linux/arm64
     container_name: wukong
     hostname: wukong-arp
     mac_address: '02:42:77:6b:00:01'
@@ -12,9 +12,9 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - '127.0.0.1:5902:5901'
-      - '127.0.0.1:1081:1080'
-      - '127.0.0.1:8889:8888'
+      - '${WUKONG_BIND_IP:-127.0.0.1}:5902:5901'
+      - '${WUKONG_BIND_IP:-127.0.0.1}:1081:1080'
+      - '${WUKONG_BIND_IP:-127.0.0.1}:8889:8888'
     shm_size: 1gb
     volumes:
       - identity:/var/lib/wukong
@@ -25,10 +25,10 @@ services:
       - vnc_password
     restart: unless-stopped
     healthcheck:
-      test: ['CMD-SHELL', 'xdpyinfo -display :1 >/dev/null 2>&1 && pgrep -x tsinvc-linux >/dev/null && pgrep -x microsocks >/dev/null && pgrep -x TSINClient >/dev/null && pgrep -x chromium >/dev/null']
+      test: ['CMD', '/usr/local/bin/healthcheck.sh']
       interval: 30s
       timeout: 5s
-      start_period: 60s
+      start_period: 180s
       retries: 3
 secrets:
   vnc_password:
