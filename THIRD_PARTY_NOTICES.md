@@ -18,4 +18,4 @@ Debian、Chromium、TigerVNC、Openbox、supervisor、tini、microsocks、tinypr
 
 ## 项目启发来源
 
-本项目受 [docker-easyconnect](https://github.com/docker-easyconnect/docker-easyconnect) 启发，借鉴其容器运行客户端、VNC 登录和代理服务的设计思路，独立实现且未从该仓库 fork。感谢原项目及其贡献者。docker-easyconnect 的代码与许可仍属于其原项目；本仓库的 MIT 许可不改变原项目许可。
+本项目受 [docker-easyconnect](https://github.com/docker-easyconnect/docker-easyconnect) 启发，借鉴其容器运行客户端、VNC 登录和代理服务的设计思路。感谢原项目及其贡献者。docker-easyconnect 的代码与许可仍属于其原项目；本仓库的 MIT 许可不改变原项目许可。
