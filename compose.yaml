@@ -1,0 +1,40 @@
+name: docker-wukong
+services:
+  wukong:
+    build: .
+    image: wukong:2.14.00051.1
+    platform: linux/amd64
+    container_name: wukong
+    hostname: wukong-arp
+    mac_address: '02:42:77:6b:00:01'
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - '127.0.0.1:5902:5901'
+      - '127.0.0.1:1081:1080'
+      - '127.0.0.1:8889:8888'
+    shm_size: 1gb
+    volumes:
+      - identity:/var/lib/wukong
+      - home:/root
+      - client:/usr/lib/tsinclient/resources/extraResource/linux
+      - logs:/var/log/wukong
+    secrets:
+      - vnc_password
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'xdpyinfo -display :1 >/dev/null 2>&1 && pgrep -x tsinvc-linux >/dev/null && pgrep -x microsocks >/dev/null && pgrep -x TSINClient >/dev/null && pgrep -x chromium >/dev/null']
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+secrets:
+  vnc_password:
+    file: .secrets/vnc_password
+volumes:
+  identity:
+  home:
+  client:
+  logs:

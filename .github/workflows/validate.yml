@@ -1,0 +1,40 @@
+name: Validate source
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax and lint
+        run: |
+          for script in scripts/*.sh; do bash -n "$script"; done
+          sh -n scripts/wukong-browser
+          shellcheck scripts/*.sh scripts/wukong-browser
+      - name: Validate Compose configuration
+        run: |
+          ./scripts/setup.sh
+          docker compose config --quiet
+      - name: Check installer pin and repository contents
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          dockerfile = Path('Dockerfile').read_text()
+          downloader = Path('scripts/download-client.sh').read_text()
+          checksum = re.search(r"echo '([0-9a-f]{64})  /tmp/client.deb'", dockerfile).group(1)
+          assert checksum in downloader, 'Installer SHA-256 values differ'
+          name = re.search(r'ARG CLIENT_DEB=(.*)', dockerfile).group(1)
+          assert name in downloader, 'Installer filenames differ'
+          tracked = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          forbidden = [f for f in tracked if f.startswith(('.secrets/', 'inspection/', 'dist/')) or f.endswith(('.deb', '.part', '.log', '.DS_Store'))]
+          assert not forbidden, f'Local artifacts tracked: {forbidden}'
+          PY

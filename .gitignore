@@ -1,0 +1,18 @@
+# Local credentials and runtime state
+.secrets/
+.env
+.env.*
+!.env.example
+
+# Proprietary installer and local diagnostics
+packages/*
+!packages/README.md
+inspection/
+*.log
+
+# Generated release bundles and OS/editor files
+dist/
+.DS_Store
+._*
+.idea/
+.vscode/

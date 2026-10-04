@@ -1,0 +1,16 @@
+.git
+.github
+.secrets
+.env
+.env.*
+inspection
+dist
+*.log
+.DS_Store
+._*
+README.md
+LICENSE
+THIRD_PARTY_NOTICES.md
+CONTRIBUTING.md
+doc
+packages/*.part
